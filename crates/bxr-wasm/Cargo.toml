@@ -1,0 +1,13 @@
+[package]
+name = "bxr-wasm"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+bxr-core = { path = "../bxr-core" }
+bxr-memory = { path = "../bxr-memory" }
+bxr-x86 = { path = "../bxr-x86" }

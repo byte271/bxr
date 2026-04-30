@@ -1,0 +1,9 @@
+/target/
+/.codex-target/
+/.verify-target/
+/.wasm-target*/
+/web/wasm/*.wasm
+/node_modules/
+/dist/
+/.tmp-build/
+*.log

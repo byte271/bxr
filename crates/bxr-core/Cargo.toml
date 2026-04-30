@@ -1,0 +1,17 @@
+[package]
+name = "bxr-core"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+bxr-devices = { path = "../bxr-devices" }
+bxr-memory = { path = "../bxr-memory" }
+bxr-snapshot = { path = "../bxr-snapshot" }
+bxr-x86 = { path = "../bxr-x86" }
+
+[dev-dependencies]
+bxr-boot = { path = "../bxr-boot" }
+
+[lints]
+workspace = true

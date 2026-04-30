@@ -1,0 +1,12 @@
+[package]
+name = "bxr-boot"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+bxr-x86 = { path = "../bxr-x86" }
+
+[lints]
+workspace = true
+

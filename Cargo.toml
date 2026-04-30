@@ -1,0 +1,20 @@
+[workspace]
+members = [
+    "crates/bxr-boot",
+    "crates/bxr-bench",
+    "crates/bxr-core",
+    "crates/bxr-devices",
+    "crates/bxr-memory",
+    "crates/bxr-snapshot",
+    "crates/bxr-wasm",
+    "crates/bxr-x86",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+version = "0.1.0-dev"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"

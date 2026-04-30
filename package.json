@@ -1,0 +1,11 @@
+{
+  "name": "bxr",
+  "private": true,
+  "version": "0.1.0-dev",
+  "type": "module",
+  "scripts": {
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "dev": "node web/server.mjs",
+    "quality": "node scripts/quality-gate.mjs"
+  }
+}

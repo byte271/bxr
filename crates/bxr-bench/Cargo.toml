@@ -1,0 +1,13 @@
+[package]
+name = "bxr-bench"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+bxr-core = { path = "../bxr-core" }
+bxr-memory = { path = "../bxr-memory" }
+
+[lints]
+workspace = true
+

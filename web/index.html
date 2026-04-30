@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BXR Machine Runtime</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="toolbar" aria-label="Machine controls">
+        <button id="boot" type="button">Boot Demo</button>
+        <button id="step" type="button">Step</button>
+        <button id="run" type="button">Run</button>
+        <button id="pause" type="button">Pause</button>
+        <button id="snapshot" type="button">Snapshot</button>
+        <button id="restore" type="button">Restore</button>
+      </section>
+      <section class="status" aria-live="polite">
+        <span id="state">idle</span>
+        <span id="detail">worker not started</span>
+      </section>
+      <section class="runtime">
+        <pre id="terminal" class="terminal" aria-label="Serial console"></pre>
+        <aside class="debugger" aria-label="Machine debugger">
+          <section class="debug-section">
+            <h2>Registers</h2>
+            <dl id="registers" class="kv"></dl>
+          </section>
+          <section class="debug-section">
+            <h2>Flags</h2>
+            <dl id="flags" class="kv flags"></dl>
+          </section>
+          <section class="debug-section">
+            <h2>Controls</h2>
+            <dl id="controls" class="kv"></dl>
+          </section>
+          <section class="debug-section">
+            <h2>Instruction</h2>
+            <dl id="instruction" class="kv"></dl>
+          </section>
+          <section class="debug-section">
+            <h2>Decode Cache</h2>
+            <dl id="cache" class="kv"></dl>
+          </section>
+          <section class="debug-section">
+            <h2>Memory</h2>
+            <pre id="memory" class="memory"></pre>
+          </section>
+          <section class="debug-section">
+            <h2>Trace</h2>
+            <ol id="trace" class="trace"></ol>
+          </section>
+          <section class="debug-section">
+            <h2>Snapshots</h2>
+            <dl id="snapshots" class="kv"></dl>
+          </section>
+        </aside>
+      </section>
+    </main>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
