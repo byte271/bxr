@@ -14,6 +14,7 @@ const requiredExports = [
   "bxr_machine_snapshot_restore",
   "bxr_machine_serial_len",
   "bxr_machine_trace_len",
+  "bxr_machine_virtual_ticks",
   "bxr_machine_decode_cache_entries",
   "bxr_machine_decode_cache_hits",
   "bxr_machine_decode_cache_misses",
@@ -34,6 +35,9 @@ if (exports.bxr_machine_create_demo() !== 1) {
 }
 if (exports.bxr_machine_step() !== 1) {
   throw new Error("failed to step demo machine");
+}
+if (exports.bxr_machine_virtual_ticks() !== 1n) {
+  throw new Error("virtual clock did not advance after one instruction");
 }
 if (exports.bxr_machine_decode_cache_entries() < 1) {
   throw new Error("decode cache did not record the first decoded instruction");
@@ -57,6 +61,9 @@ if (exports.bxr_machine_trace_len() === 0) {
 }
 if (exports.bxr_machine_snapshot_restore() !== 1) {
   throw new Error("failed to restore snapshot");
+}
+if (exports.bxr_machine_virtual_ticks() !== 1n) {
+  throw new Error("restored machine did not preserve virtual time");
 }
 if (exports.bxr_machine_decode_cache_entries() !== 0) {
   throw new Error("restored machine should rebuild transient decode cache");

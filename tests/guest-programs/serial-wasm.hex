@@ -1,0 +1,10 @@
+# bxr-minimal-x64-v1 demo corpus: write "WASM\n" to debug serial port, then halt.
+# Encoding pattern per byte:
+#   48 b8 <byte> 00 00 00 00 00 00 00   mov rax, <byte>
+#   e6 e9                                 out 0xe9, al
+48 b8 57 00 00 00 00 00 00 00 e6 e9
+48 b8 41 00 00 00 00 00 00 00 e6 e9
+48 b8 53 00 00 00 00 00 00 00 e6 e9
+48 b8 4d 00 00 00 00 00 00 00 e6 e9
+48 b8 0a 00 00 00 00 00 00 00 e6 e9
+f4

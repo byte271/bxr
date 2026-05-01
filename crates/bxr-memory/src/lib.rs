@@ -38,6 +38,16 @@ impl PhysicalMemory {
         self.bytes.is_empty()
     }
 
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+
+    pub fn page_bytes(&self, page_index: usize) -> Option<&[u8]> {
+        let start = page_index.checked_mul(PAGE_SIZE)?;
+        let end = start.checked_add(PAGE_SIZE)?;
+        self.bytes.get(start..end)
+    }
+
     pub fn read(&self, addr: u64, out: &mut [u8]) -> Result<(), MemoryError> {
         let range = self.checked_range(addr, out.len())?;
         out.copy_from_slice(&self.bytes[range]);
@@ -173,6 +183,16 @@ mod tests {
         assert_eq!(memory.page_index_for_addr(0), Some(0));
         assert_eq!(memory.page_index_for_addr(PAGE_SIZE as u64), Some(1));
         assert_eq!(memory.page_index_for_addr((PAGE_SIZE * 2) as u64), None);
+    }
+
+    #[test]
+    fn exposes_stable_page_slices_for_snapshotting() {
+        let mut memory = PhysicalMemory::new(PAGE_SIZE * 2).unwrap();
+        memory.write(PAGE_SIZE as u64, &[0xaa, 0xbb]).unwrap();
+
+        assert_eq!(memory.as_bytes().len(), PAGE_SIZE * 2);
+        assert_eq!(&memory.page_bytes(1).unwrap()[..2], &[0xaa, 0xbb]);
+        assert_eq!(memory.page_bytes(2), None);
     }
 
     #[test]

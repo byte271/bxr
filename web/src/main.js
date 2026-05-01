@@ -92,6 +92,7 @@ function renderDebug(debug) {
     available: debug.snapshotAvailable ? "yes" : "no",
     mode: debug.mode,
     serial: `${debug.serialLength} bytes`,
+    "virtual ticks": debug.virtualTicks,
   });
 }
 

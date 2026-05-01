@@ -1,11 +1,11 @@
 #![forbid(unsafe_code)]
 
-use bxr_devices::SerialDevice;
+use bxr_devices::{Device, SerialDevice};
 use bxr_memory::{MemoryError, PhysicalMemory, PAGE_SIZE};
-use bxr_snapshot::SnapshotManifest;
+use bxr_snapshot::{ChunkKind, ChunkRef, SnapshotManifest};
 use bxr_x86::decode::{decode_one, DecodeError, Instruction, MAX_INSTRUCTION_LEN};
 use bxr_x86::{
-    translate, AccessType, CpuState, ExecuteError, ExecuteOutcome, MmuError, PageTableMemory,
+    translate, AccessType, CpuState, ExecuteError, ExecuteOutcome, Gpr, MmuError, PageTableMemory,
     PrivilegeLevel, TranslateRequest, Width, X86PortIo, X86StackMemory,
 };
 
@@ -21,7 +21,7 @@ pub const MINIMAL_X64_V1: MachineProfile = MachineProfile {
     id: "bxr-minimal-x64-v1",
     cpuid_profile: "bxr-x64-conservative-v1",
     default_ram_bytes: 128 * 1024 * 1024,
-    devices: &["serial0"],
+    devices: &["serial0", "virtual-clock0"],
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -30,6 +30,21 @@ pub enum MachineRunState {
     Running,
     Halted,
     Faulted,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct VirtualClock {
+    ticks: u64,
+}
+
+impl VirtualClock {
+    pub const fn ticks(self) -> u64 {
+        self.ticks
+    }
+
+    fn advance_instruction(&mut self) {
+        self.ticks = self.ticks.wrapping_add(1);
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -80,6 +95,7 @@ pub struct TraceEvent {
     pub sequence: u64,
     pub rip_before: u64,
     pub rip_after: u64,
+    pub virtual_ticks_after: u64,
     pub instruction_len: u8,
     pub instruction_bytes: [u8; MAX_INSTRUCTION_LEN],
     pub operation_code: u32,
@@ -350,6 +366,7 @@ pub struct MachineSnapshot {
     pub cpu: CpuState,
     pub memory: PhysicalMemory,
     pub serial: SerialDevice,
+    pub virtual_clock: VirtualClock,
     pub run_state: MachineRunState,
     pub trace: TraceLog,
 }
@@ -360,6 +377,7 @@ pub struct Machine {
     pub cpu: CpuState,
     pub memory: PhysicalMemory,
     pub serial: SerialDevice,
+    pub virtual_clock: VirtualClock,
     pub run_state: MachineRunState,
     pub trace: TraceLog,
     decode_cache: DecodeCache,
@@ -372,6 +390,7 @@ impl Machine {
             cpu: CpuState::default(),
             memory: PhysicalMemory::new(ram_bytes)?,
             serial: SerialDevice::default(),
+            virtual_clock: VirtualClock::default(),
             run_state: MachineRunState::Paused,
             trace: TraceLog::default(),
             decode_cache: DecodeCache::default(),
@@ -391,7 +410,24 @@ impl Machine {
     }
 
     pub fn snapshot_manifest(&self, created_by: impl Into<String>) -> SnapshotManifest {
-        SnapshotManifest::new(self.profile.id, created_by)
+        let mut manifest = SnapshotManifest::new(self.profile.id, created_by);
+        manifest.add_chunk(ChunkRef::from_bytes(
+            ChunkKind::Cpu,
+            &self.cpu_chunk_bytes(),
+        ));
+        manifest.add_chunk(ChunkRef::from_bytes(
+            ChunkKind::MemoryPage,
+            self.memory.as_bytes(),
+        ));
+        manifest.add_chunk(ChunkRef::from_bytes(
+            ChunkKind::Device,
+            &self.serial.snapshot().payload,
+        ));
+        manifest.add_chunk(ChunkRef::from_bytes(
+            ChunkKind::Scheduler,
+            &self.virtual_clock.ticks().to_le_bytes(),
+        ));
+        manifest
     }
 
     pub fn capture_snapshot(&self, created_by: impl Into<String>) -> MachineSnapshot {
@@ -401,6 +437,7 @@ impl Machine {
             cpu: self.cpu.clone(),
             memory: self.memory.clone(),
             serial: self.serial.clone(),
+            virtual_clock: self.virtual_clock,
             run_state: self.run_state,
             trace: self.trace.clone(),
         }
@@ -412,6 +449,7 @@ impl Machine {
             cpu: snapshot.cpu,
             memory: snapshot.memory,
             serial: snapshot.serial,
+            virtual_clock: snapshot.virtual_clock,
             run_state: snapshot.run_state,
             trace: snapshot.trace,
             decode_cache: DecodeCache::default(),
@@ -486,6 +524,7 @@ impl Machine {
             };
             self.cpu.execute_decoded_with_bus(&instruction, &mut bus)?
         };
+        self.virtual_clock.advance_instruction();
         if outcome == ExecuteOutcome::Halted {
             self.run_state = MachineRunState::Halted;
         }
@@ -575,6 +614,7 @@ impl Machine {
             sequence: 0,
             rip_before: report.rip_before,
             rip_after: self.cpu.registers.rip(),
+            virtual_ticks_after: self.virtual_clock.ticks(),
             instruction_len: report.instruction.len,
             instruction_bytes: report.instruction.bytes,
             operation_code: report.instruction.operation_code(),
@@ -586,6 +626,41 @@ impl Machine {
             rsp_after: self.cpu.registers.read(bxr_x86::Gpr::Rsp),
             serial_len_after: self.serial.output().len(),
         });
+    }
+
+    fn cpu_chunk_bytes(&self) -> Vec<u8> {
+        const GPRS: [Gpr; 16] = [
+            Gpr::Rax,
+            Gpr::Rcx,
+            Gpr::Rdx,
+            Gpr::Rbx,
+            Gpr::Rsp,
+            Gpr::Rbp,
+            Gpr::Rsi,
+            Gpr::Rdi,
+            Gpr::R8,
+            Gpr::R9,
+            Gpr::R10,
+            Gpr::R11,
+            Gpr::R12,
+            Gpr::R13,
+            Gpr::R14,
+            Gpr::R15,
+        ];
+
+        let mut bytes = Vec::with_capacity(16 * 8 + 8 * 7 + 1);
+        for gpr in GPRS {
+            bytes.extend_from_slice(&self.cpu.registers.read(gpr).to_le_bytes());
+        }
+        bytes.extend_from_slice(&self.cpu.registers.rip().to_le_bytes());
+        bytes.extend_from_slice(&self.cpu.rflags.bits().to_le_bytes());
+        bytes.extend_from_slice(&self.cpu.controls.cr0.to_le_bytes());
+        bytes.extend_from_slice(&self.cpu.controls.cr2.to_le_bytes());
+        bytes.extend_from_slice(&self.cpu.controls.cr3.to_le_bytes());
+        bytes.extend_from_slice(&self.cpu.controls.cr4.to_le_bytes());
+        bytes.extend_from_slice(&self.cpu.controls.efer.to_le_bytes());
+        bytes.push(u8::from(self.cpu.halted));
+        bytes
     }
 }
 
@@ -601,6 +676,7 @@ mod tests {
         let machine = Machine::new_minimal(PAGE_SIZE).unwrap();
         assert_eq!(machine.profile.id, "bxr-minimal-x64-v1");
         assert_eq!(machine.run_state, MachineRunState::Paused);
+        assert_eq!(machine.virtual_clock.ticks(), 0);
     }
 
     #[test]
@@ -633,8 +709,10 @@ mod tests {
         assert_eq!(machine.run_state, MachineRunState::Halted);
         assert_eq!(machine.cpu.registers.read(Gpr::Rax), 43);
         assert!(!machine.cpu.rflags.get(Flag::Zero));
+        assert_eq!(machine.virtual_clock.ticks(), 3);
         assert_eq!(machine.trace.events().len(), 3);
         assert_eq!(machine.trace.events()[0].rip_before, 0x100);
+        assert_eq!(machine.trace.events()[0].virtual_ticks_after, 1);
         assert_eq!(machine.trace.events()[2].outcome_code, 2);
     }
 
@@ -768,6 +846,36 @@ mod tests {
         assert_eq!(restored.serial.output(), b"A");
         assert_eq!(restored.run_state, MachineRunState::Halted);
         assert_eq!(restored.cpu.registers.rip(), 0x10d);
+        assert_eq!(restored.virtual_clock.ticks(), 3);
         assert_eq!(restored.trace.events().len(), 3);
+    }
+
+    #[test]
+    fn snapshot_manifest_records_content_chunks() {
+        let mut machine = Machine::new_minimal(PAGE_SIZE).unwrap();
+        let before = machine.snapshot_manifest("test");
+
+        machine.cpu.registers.set_rip(0x100);
+        machine.load_program(0x100, &[0x90, 0xf4]).unwrap();
+        machine.step().unwrap();
+        let after = machine.snapshot_manifest("test");
+
+        assert_eq!(before.chunks.len(), 4);
+        assert_eq!(
+            before
+                .chunks
+                .iter()
+                .map(|chunk| chunk.kind)
+                .collect::<Vec<_>>(),
+            vec![
+                ChunkKind::Cpu,
+                ChunkKind::MemoryPage,
+                ChunkKind::Device,
+                ChunkKind::Scheduler
+            ]
+        );
+        assert_ne!(before.chunks[0].hash, after.chunks[0].hash);
+        assert_ne!(before.chunks[1].hash, after.chunks[1].hash);
+        assert_ne!(before.chunks[3].hash, after.chunks[3].hash);
     }
 }

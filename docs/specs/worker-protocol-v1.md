@@ -5,12 +5,17 @@ The browser runtime communicates with the machine worker through explicit comman
 ## Commands
 
 - `CreateMachine`
-- `LoadBootArtifact`
-- `Run`
+- `Step`
+- `RunDemo`
 - `Pause`
-- `StepInstruction`
 - `Snapshot`
 - `Restore`
+
+Future commands:
+
+- `LoadBootArtifact`
+- `Run`
+- `StepInstruction`
 - `Reset`
 
 ## Events
@@ -19,12 +24,16 @@ The browser runtime communicates with the machine worker through explicit comman
 - `Paused`
 - `Running`
 - `Stopped`
-- `SerialOutput`
 - `SnapshotReady`
 - `Fault`
+- `SerialState`
+- `DebugState`
+
+Future events:
+
+- `SerialOutput`
 - `Trace`
 
 ## Rule
 
 The main thread never executes guest instructions. It sends commands, receives events, and renders UI state.
-

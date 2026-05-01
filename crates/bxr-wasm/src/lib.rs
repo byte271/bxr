@@ -130,6 +130,11 @@ pub extern "C" fn bxr_machine_rflags() -> u64 {
 }
 
 #[no_mangle]
+pub extern "C" fn bxr_machine_virtual_ticks() -> u64 {
+    with_machine(|machine| machine.virtual_clock.ticks()).unwrap_or(0)
+}
+
+#[no_mangle]
 pub extern "C" fn bxr_machine_control(index: u32) -> u64 {
     with_machine(|machine| match index {
         0 => machine.cpu.controls.cr0,
@@ -406,6 +411,7 @@ mod tests {
         assert_eq!(bxr_machine_state_code(), 1);
         assert_eq!(bxr_machine_step(), 1);
         assert_eq!(bxr_machine_gpr(0), u64::from(b'W'));
+        assert_eq!(bxr_machine_virtual_ticks(), 1);
         assert_eq!(bxr_machine_decode_cache_entries(), 1);
         assert_eq!(bxr_machine_decode_cache_misses(), 1);
         assert_eq!(bxr_machine_snapshot_capture(), 1);
@@ -417,6 +423,7 @@ mod tests {
         assert_eq!(bxr_machine_state_code(), 1);
         assert_eq!(bxr_machine_serial_len(), 0);
         assert_eq!(bxr_machine_rip(), 0x10a);
+        assert_eq!(bxr_machine_virtual_ticks(), 1);
         assert_eq!(bxr_machine_decode_cache_entries(), 0);
         assert_eq!(bxr_machine_current_instruction_len(), 2);
         assert_eq!(bxr_machine_current_instruction_code(), 11);

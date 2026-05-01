@@ -1,7 +1,9 @@
 /target/
+/.omx/
 /.codex-target/
 /.verify-target/
 /.wasm-target*/
+/.build-target*/
 /web/wasm/*.wasm
 /node_modules/
 /dist/

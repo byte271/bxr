@@ -219,6 +219,7 @@ function readDebugState(target) {
     return {
       mode: target.mode,
       serialLength: target.serial.length,
+      virtualTicks: "0",
       snapshotAvailable: false,
       registers: { rip: "0x0", rax: "0x0", rsp: "0x0" },
       flags: {},
@@ -236,6 +237,7 @@ function readDebugState(target) {
   return {
     mode: target.mode,
     serialLength: Number(exports.bxr_machine_serial_len()),
+    virtualTicks: exports.bxr_machine_virtual_ticks().toString(),
     snapshotAvailable: exports.bxr_machine_snapshot_available() === 1,
     registers: {
       rip: hex(rip),

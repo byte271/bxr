@@ -46,7 +46,10 @@ This tracks the first 20 implementation tasks from the architecture proposal.
 - Browser debugger now shows current instruction bytes, memory around RIP, and recent trace events.
 - Persistent Wasm ABI exposes trace, memory, current-instruction, register, flag, control, serial, and snapshot state.
 - Native benchmark harness added as `cargo run -p bxr-bench --release`.
-- Research notes added in `docs/research-observability.md`.
 - Page-generation-backed decode cache added with Rust tests, Wasm ABI counters, browser debugger display, and benchmark metrics.
-- World-class engineering criteria captured in `docs/world-class-criteria.md`.
 - Repeatable local quality gate added as `npm run quality`.
+- Rust toolchain pinned with `rust-toolchain.toml`; GitHub Actions runs the local quality gate.
+- Reproducible guest demo corpus added under `tests/guest-programs` and covered by native tests.
+- Deterministic virtual clock added to machine state, snapshots, Wasm ABI, smoke tests, and browser debugger metadata.
+- Snapshot manifests now include content-addressed chunk metadata for CPU, memory, device, and scheduler state.
+- Release architecture and roadmap docs consolidated into `docs/architecture.md` and `docs/roadmap.md`.
